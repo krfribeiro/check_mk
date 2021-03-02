@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# Author : ricardoftribeiro@gmail.com @krfribeiro
+# -*- coding: utf-8 -*-
 import os, sys, time, subprocess, json, requests, datetime, hashlib, hmac, base64
 
 # OMS Related Variables #

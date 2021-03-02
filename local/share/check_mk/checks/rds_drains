@@ -1,6 +1,6 @@
-#!/usr/bin/python
-# -*- encoding: utf-8; py-indent-offset: 4 -*-
-#Author : Ricardo.Ribeiro<at>Axians.com
+#!/usr/bin/env python
+# Author : ricardoftribeiro@gmail.com @krfribeiro
+# -*- coding: utf-8 -*-
 
 def inventory_rds_drains(info):
    inventory = []

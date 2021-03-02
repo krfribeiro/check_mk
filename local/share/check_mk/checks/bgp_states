@@ -1,7 +1,6 @@
-#!/usr/bin/python
-# -*- encoding: utf-8; py-indent-offset: 4 -*-
-# Author : Ricardo Ribeiro
-# Check for validate BGP state
+#!/usr/bin/env python
+# Author : ricardoftribeiro@gmail.com @krfribeiro
+# -*- coding: utf-8 -*-
 #
 # For more details check BGP-MIB @ http://www.circitor.fr/Mibs/Html/B/BGP4-MIB.php
 #

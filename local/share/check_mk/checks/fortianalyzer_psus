@@ -1,7 +1,6 @@
-#!/usr/bin/python
-# -*- encoding: utf-8; py-indent-offset: 4 -*-
-#
-# GDC - Monitorizacao Datacenter
+#!/usr/bin/env python
+# Author : ricardoftribeiro@gmail.com @krfribeiro
+# -*- coding: utf-8 -*-
 # FORTIGATE FORTIANALYSER Power Supply Status
 #
 # fmPowerEntry -  .1.3.6.1.4.1.12356.103.8.2.1

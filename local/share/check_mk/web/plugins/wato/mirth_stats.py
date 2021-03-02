@@ -1,6 +1,6 @@
 # Mirth Datasource Program (Special Agent) for Check_MK
 # Tested on Check_MK CEE 1.5 and 1.6
-# Author : ricardo.ribeiro@axians.com
+# Author : ricardoftribeiro@gmail.com @krfribeiro
 
 register_check_parameters(
     subgroup_applications,

@@ -1,7 +1,7 @@
-#!/usr/bin/python
-# -*- encoding: utf-8; py-indent-offset: 4 -*-
+#!/usr/bin/env python
+# Author : ricardoftribeiro@gmail.com @krfribeiro
+# -*- coding: utf-8 -*-
 #
-# GDC - Monitorizacao Datacenter
 # Fujitsu Eternus DX Raid Group Health
 #
 # fjdaryMgtRaidGrpTable

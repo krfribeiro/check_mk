@@ -2,7 +2,7 @@ title: Mirth Channels status and statistics
 agents:
 catalog: app/Mirth
 license: GPL
-author: Ricardo Ribeiro
+author: Ricardo Ribeiro <ricardoftribeiro@gmail.com>
 distribution: 
 description:
  This check uses the special agent for Mirth API. Gets channels states and statistics.

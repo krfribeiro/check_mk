@@ -1,5 +1,6 @@
 title: Graphite Data Collector
 agents: graphite
+author: Ricardo Ribeiro <ricardoftribeiro@gmail.com>
 license: GPL
 distribution: check_mk
 description:

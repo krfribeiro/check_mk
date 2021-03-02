@@ -1,3 +1,7 @@
+#!/usr/bin/env python
+# Author : ricardoftribeiro@gmail.com @krfribeiro
+# -*- coding: utf-8 -*-
+
 inventory_displayhints.update({
     ".hardware.bladesystem."                      : { "title" : _("BladeSystem") },
     ".hardware.bladesystem.blades:"               : { "title" : _("Blades"), "render" : render_inv_dicttable, "keyorder" : [ "index", "name", "description", "serial", "model" ]},
