@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+# Author : ricardoftribeiro@gmail.com @krfribeiro
+# -*- coding: utf-8 -*-
+# Huawei Processor (CPU) Status
+#
+# cpuDescriptionTable
+#
+# snmpwalk -v2c -c <COMMUNITY> <IP> .1.3.6.1.4.1.2011.2.235.1.1.15.50.1
+#	.6  cpuStatus
+#	.10 cpuDeviceName
+#
+
+def inventory_huaweiibmc_cpu(info):
+    inventory = []
+    for line in info:
+        inventory.append((line[1],None))
+    return inventory
+
+def check_huaweiibmc_cpu(item, _no_params, info):
+    for line in info:
+       if line[1] == item:
+           status = int(line[0])
+           if status >= 3:
+               return (2, "CRIT - Processor in critical state" )
+           elif status == 2:
+               return (1, "WARN - Processor in warning (minor) state")
+           else:
+               return (0, "OK - Processor is OK")
+    return (3, "UNKNOWN - Processor %s not found in SNMP Output" % item)
+
+check_info["huaweiibmc_cpu"] = {
+    "check_function"        : check_huaweiibmc_cpu,
+    "inventory_function"    : inventory_huaweiibmc_cpu,
+    "service_description"   : "CPU %s",
+    "snmp_info"             : ( ".1.3.6.1.4.1.2011.2.235.1.1.15.50.1", [ "6", "10" ] ) }
