@@ -25,7 +25,7 @@ def check_fortinet_hardware(item, _no_params, info):
                return (2, "CRIT - %s in critical state" % item )
            else:
                return (0, "OK - %s is OK" % item )
-    return (3, "UNKNOWN - Power Supply %s not found in SNMP Output" % item)
+    return (3, "UNKNOWN - %s not found in SNMP Output" % item)
 
 check_info["fortinet_hardware"] = {
     "check_function"        : check_fortinet_hardware,
