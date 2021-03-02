@@ -1,0 +1,77 @@
+#!/usr/bin/env python
+# Mirth Datasource Program (Special Agent) for Check_MK
+# Tested on Check_MK CEE 1.5 and 1.6
+# Author : ricardo.ribeiro@axians.com
+# -*- coding: utf-8 -*-
+
+# <<<mirth_stats>>>
+# MIGRACAO_v2_3 STOPPED 0 0 0 0 0
+# ADT_A31_IN_01_Update_Patient_PMG STARTED 841132 0 0 0 841132
+# ADT_A28_IN_02_New_Patient_PMG STARTED 100139 57713 0 0 42426
+# MIGRACAO_v2_1 STOPPED 0 0 0 0 0
+# MIGRACAO_v2_2 STOPPED 0 0 0 0 0
+# ADT_A40_OUT_Merge_Patient STARTED 2505 0 0 0 2505
+# ADT_A28_IN_01_New_Patient_PMG STARTED 100139 0 0 0 100139
+# ADT_A31_IN_02_Update_Patient_PMG STARTED 841132 83 0 0 840988
+# ADT_A28_A31_OUT_New_Update_Patient STARTED 891561 0 0 0 891561
+# MIGRACAO_v2_4 STOPPED 0 0 0 0 0
+
+factory_settings['mirth_stats'] = {
+	'mirth_error': ( 2, 4 ),
+	'mirth_queued': ( 10, 20 ),
+}
+
+def inventory_mirth_stats(info):
+	inventory = []
+   	for line in info:
+        	if line[1] != "STOPPED":
+            		inventory.append((line[0],mirth_stats))
+	return inventory
+
+def check_mirth_stats(item, params, info):
+	for line in info:
+		if line[0] == item:
+          		err_warn, err_crit = params.get('mirth_error')
+	  		que_warn, que_crit = params.get('mirth_queued')
+		 
+          		perfdata = [ ("received", line[2]), ("error", line[3], err_warn, err_crit), ("filtered", line[4]), ("queued", line[5], que_warn, que_crit) , ("sent", line[6]) ]
+
+			if line[1] == "STOPPED":
+				status_code = 2
+				state_message = "Channel is STOPPED (!!)"
+	  		else:
+				status_code = 0
+				state_message = "Channel is STARTED"
+		 
+	  		if int(line[3]) >= int(err_crit):
+				status_code = 2
+				err_outmessage = "Error : %s (!!)" % ( line[3] )
+	  		elif int(line[3]) >= int(err_warn):
+				status_code = max(1, status_code)
+				err_outmessage = "Error : %s (!)" % ( line[3] )
+	  		else:
+				status_code = max(0, status_code)
+				err_outmessage = "Error : %s" % ( line[3] )
+		
+	  		if int(line[5]) >= int(que_crit):
+				status_code = 2
+				que_outmessage = "Queued : %s (!!)" % ( line[3] )
+	  		elif int(line[5]) >= int(que_warn):
+				status_code = max(1, status_code)
+				que_outmessage = "Queued : %s (!)" % ( line[3] )
+	  		else:
+				status_code = max(0, status_code)
+				que_outmessage = "Queued : %s" % ( line[4] )
+
+			outmessage="%s | Received : %s | %s | Filtered: %s | %s | Sent: %s" % ( state_message, line[2], err_outmessage , line[4] , que_outmessage , line[6] )
+			
+			return status_code, outmessage, perfdata
+
+check_info["mirth_stats"] = {
+    'check_function':            check_mirth_stats,
+    'inventory_function':        inventory_mirth_stats,
+    'service_description':       'Channel %s',
+    'has_perfdata':              True,
+    'default_levels_variable' :  'mirth_stats',
+    'group'	:	'mirth_stats'
+}

@@ -1,0 +1,52 @@
+#!/usr/bin/python
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
+#
+# GDC - Monitorizacao Datacenter
+# Fortinet Firewalls Virtual Domain SES Usage
+#
+# fgVdTable
+#
+# snmpwalk -On -v2c -c <COMMUNITY> <IP> .1.3.6.1.4.1.12356.101.3.2.1.1
+#
+#  .1.3.6.1.4.1.12356.101.3.2.1.1.2 Virtual Domain Name
+#  .1.3.6.1.4.1.12356.101.3.2.1.1.7 Virtual Domain SES Usage
+
+# fortigate_vdom_ses_default_levels = (250000, 350000)
+
+factory_settings["fortigate_vdoms_ses_default_levels"] = {
+    "sessions"                 :       (2500000000,3500000000),
+}
+
+def inventory_fortigate_vdoms_ses(info):
+    inventory = []
+    for line in info:
+        inventory.append((line[0],fortigate_vdoms_ses_default_levels))
+    return inventory
+
+def check_fortigate_vdoms_ses(item, params, info):
+    for line in info:
+       if line[0] == item:
+           global g_counters
+           # warn, crit = fortigate_vdom_ses_default_levels
+           warn, crit = params.get("sessions")
+           perfdata = []
+           ses_usage = int(line[1])
+           for dir, value in [ ('SESUsage', int(line[1])) ]:
+               perfdata.append(( dir, saveint(value) ))
+           if ses_usage >= crit:
+               return (2, "CRIT - Virtual Domain sessions is %s" % ses_usage , perfdata)
+           elif ses_usage >= warn:
+               return (1, "WARN - Virtual Domain sessions is %s" % ses_usage , perfdata)
+           else:
+               return (0, "OK - Virtual Domain sessions is %s" % ses_usage , perfdata)
+    return (3, "UNKNOWN - Virtual Domain %s not found in SNMP output" % item)
+
+check_info["fortigate_vdoms_ses"] = {
+    "check_function"             : check_fortigate_vdoms_ses,
+    "inventory_function"         : inventory_fortigate_vdoms_ses,
+    "service_description"        : "Virtual Domain Sessions - %s",
+    "has_perfdata"               : True,
+    "default_levels_variable"    : "fortigate_vdoms_ses_default_levels",
+    "group"                      : "fortigate_vdoms_ses",
+    "snmp_info"                  : ( ".1.3.6.1.4.1.12356.101.3.2.1.1", [ "2", "7" ] )
+}

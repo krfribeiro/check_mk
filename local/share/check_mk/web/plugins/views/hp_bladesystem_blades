@@ -1,0 +1,11 @@
+inventory_displayhints.update({
+    ".hardware.bladesystem."                      : { "title" : _("BladeSystem") },
+    ".hardware.bladesystem.blades:"               : { "title" : _("Blades"), "render" : render_inv_dicttable, "keyorder" : [ "index", "name", "description", "serial", "model" ]},
+    ".hardware.bladesystem.blades:*.index"        : { "title" : _("Index") },
+    ".hardware.bladesystem.blades:*.name"         : { "title" : _("Name") },
+    ".hardware.bladesystem.blades:*.description"  : { "title" : _("Description") },
+    ".hardware.bladesystem.blades:*.serial"       : { "title" : _("Serial") },
+    ".hardware.bladesystem.blades:*.model"        : { "title" : _("Model") },
+})
+
+declare_invtable_view("invblades",     ".hardware.bladesystem.blades:",    _("Blade"),     _("Blades"))

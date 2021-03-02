@@ -1,0 +1,17 @@
+title: Mirth Channels status and statistics
+agents:
+catalog: app/Mirth
+license: GPL
+author: Ricardo Ribeiro
+distribution: 
+description:
+ This check uses the special agent for Mirth API. Gets channels states and statistics.
+
+item:
+ The name of the channel
+
+inventory:
+ One service for every channel found
+ 
+perfdata:
+ Received messages, error messages, filtered messages, queued messages and sent messages

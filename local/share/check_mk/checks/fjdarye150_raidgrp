@@ -1,0 +1,35 @@
+#!/usr/bin/python
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
+#
+# GDC - Monitorizacao Datacenter
+# Fujitsu Eternus DX Raid Group Health
+#
+# fjdaryMgtRaidGrpTable
+#
+# snmpwalk -On -v2c -c <COMMUNITY> <IP>  .1.3.6.1.4.1.211.1.21.1.150.14.3.2.1
+#
+#  .1.3.6.1.4.1.211.1.21.1.150.14.3.2.1.1 -  fjdaryMgtRaidGrpNumber
+#  .1.3.6.1.4.1.211.1.21.1.150.14.3.2.1.2 -  fjdaryMgtRaidGrpStatus
+#  INTEGER {unknown(1),ok(2),degraded(3),error(6),dormant(15) }
+
+def inventory_fjdarye150_raidgrp(info):
+    inventory = []
+    for line in info:
+        inventory.append((line[0],None))
+    return inventory
+
+def check_fjdarye150_raidgrp(item, _no_params, info):
+    for line in info:
+       if line[0] == item:
+           status = int(line[1])
+           if status != 2:
+               return (2, "CRIT - Raid Group %s is critical or degraded" % item )
+           else:
+               return (0, "OK - Raid Group %s is healthy" % item)
+    return (3, "UNKNOWN - Raid Group %s not found in SNMP output" % item)
+
+check_info["fjdarye150_raidgrp"] = {
+    "check_function"        : check_fjdarye150_raidgrp,
+    "inventory_function"    : inventory_fjdarye150_raidgrp,
+    "service_description"   : "Raid Group %s",
+    "snmp_info"             : ( ".1.3.6.1.4.1.211.1.21.1.150.14.3.2.1", [ "1", "2" ] ) }

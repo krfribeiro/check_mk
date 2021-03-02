@@ -1,0 +1,41 @@
+#!/usr/bin/python
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
+#
+# GDC - Monitorizacao Datacenter
+# Huawei iBMC Disks Status
+#
+# hardDiskDescriptionEntry
+#
+# snmpwalk -v2c -c <COMMUNITY> <IP> .1.3.6.1.4.1.2011.2.235.1.1.18.50.1
+# .1.3.6.1.4.1.2011.2.235.1.1.18.50.1
+# .2 # hardDiskPresence
+# .3 # hardDiskStatus
+# .6 # hardDiskDevicename
+#
+
+def inventory_huaweiibmc_disks(info):
+    inventory = []
+    for line in info:
+        # presence = int(line[0])
+        if int(line[0]) == 2:
+        # if presence == 2:
+            inventory.append((line[2],None))
+    return inventory
+
+def check_huaweiibmc_disks(item, _no_params, info):
+    for line in info:
+       if line[2] == item:
+           status = int(line[1])
+           if status == 1:
+               return (0, "OK - Disk is healthy" )
+           elif status == 2:
+               return (1, "WARN - Disk is in warning (minor) state")
+           else:
+               return (2, "CRIT - Disk is CRITICAL state")
+    return (3, "UNKNOWN -  Disk %s not found in SNMP Output" % item)
+
+check_info["huaweiibmc_disks"] = {
+    "check_function"        : check_huaweiibmc_disks,
+    "inventory_function"    : inventory_huaweiibmc_disks,
+    "service_description"   : "Disk %s",
+    "snmp_info"             : ( ".1.3.6.1.4.1.2011.2.235.1.1.18.50.1", [ "2", "3", "6" ] ) }

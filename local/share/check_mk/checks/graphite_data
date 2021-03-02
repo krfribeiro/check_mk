@@ -1,0 +1,45 @@
+#!/usr/bin/python
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
+# Author : Ricardo.Ribeiro<at>Axians.com
+
+# <<<graphite_data>>>
+# biztalk.CCA.delay 329.0 0 seconds
+# biztalk.CCB.delay 0.0 0 seconds
+# biztalk.CCC.delay 13.0 0 seconds
+# helios.queues.PACS.PACS_CCA.queue 0.0 0 count
+# helios.queues.PACS.PACS_CCB.queue 0.0 0 count
+# helios.queues.PACS.PACS_CCC.queue 0.0 0 count
+# helios.queues.PACS.PACS_CCTV.queue 0.0 0 count
+
+factory_settings["graphite_data_default_levels"] = {
+    "graphite_settings"                 :       (100,200),
+}
+
+def inventory_graphite_data(info):
+   inventory = []
+   for line in info:
+        if int(line[2]) == 0:
+            inventory.append((line[0],graphite_data_default_levels))
+   return inventory
+
+def check_graphite_data(item, params, info):
+   for line in info:
+      if line[0] == item:
+         warn, crit = params.get("graphite_settings")
+         perfdata = []
+         metric_val = line[3] + '.' + item
+         perf_val = savefloat(line[1])
+         perf = [ (metric_val , perf_val) ]
+
+         if line[2] != "0":
+            return 2, "No data has been received for metric %s - Perhaps probe problem" % (line[0]), perf
+         else:
+            return 0, "Metric %s current value is %s" % (line[0],line[1]) , perf
+
+check_info["graphite_data"] = {
+    'check_function':            check_graphite_data,
+    'inventory_function':        inventory_graphite_data,
+    'service_description':       'Metric %s',
+    'has_perfdata':              True,
+    'default_levels_variable' :  'graphite_data_default_levels'
+}

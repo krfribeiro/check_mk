@@ -1,0 +1,35 @@
+#!/usr/bin/python
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
+#
+# GDC - Monitorizacao Datacenter
+# A10 Networking Monitoring
+#
+#  axSysPowerSupplyStatusEntry
+#
+# snmpwalk -On -v2c -c GIJOE 10.185.96.66 .1.3.6.1.4.1.22610.2.4.1.5.12.1
+#
+#  .1.3.6.1.4.1.22610.2.4.1.5.12.1.2 PowerSupplyName
+#  .1.3.6.1.4.1.22610.2.4.1.5.12.1.3 PowerSupplyStatus
+
+def inventory_a10PowerSupply(info):
+    inventory = []
+    for line in info:
+        inventory.append((line[0],None))
+    return inventory
+
+def check_a10PowerSupply(item, _no_params, info):
+    for line in info:
+       if line[0] == item:
+           # global g_counters
+           status = int(line[1])
+           if status != 1:
+               return (2, "CRIT - PowerSupply is off or absent" )
+           else:
+               return (0, "OK - PowerSupply is ON" )
+    return (3, "UNKNOWN - PowerSupply %s not found in SNMP output" % item)
+
+check_info["a10PowerSupply"] = {
+    "check_function"        : check_a10PowerSupply,
+    "inventory_function"    : inventory_a10PowerSupply,
+    "service_description"   : "A10 Power Supply - %s",
+    "snmp_info"             : ( ".1.3.6.1.4.1.22610.2.4.1.5.12.1", [ "2", "3" ] ) }

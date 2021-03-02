@@ -1,0 +1,23 @@
+#!/usr/bin/env python
+# Mirth Datasource Program (Special Agent) for Check_MK
+# Tested on Check_MK CEE 1.5 and 1.6
+# Author : ricardo.ribeiro@axians.com
+# -*- coding: utf-8 -*-
+
+def agent_mirth_arguments(params, hostname, ipaddress):
+    args = ''
+
+    if "user" in params:
+        args += " -u " + quote_shell_string(params["user"])
+    if "secret" in params:
+        args += " -s " + quote_shell_string(params["secret"])
+    if "port" in params:
+        args += " -p " + quote_shell_string(params["port"])
+    if "follow" in params:
+        args += " -l " + quote_shell_string(params["follow"])
+
+    args += " " + quote_shell_string(hostname)
+
+    return args
+
+special_agent_info['mirth'] = agent_mirth_arguments

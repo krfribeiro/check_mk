@@ -1,0 +1,229 @@
+#!/usr/bin/python
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
+# Author : rfribeiro (ricardoftribeiro@gmail.com)
+
+# Default thresholds
+# Basically, for any deviation for this four counters we want to be notificated
+
+factory_settings["cisco_nx_fcport_default_levels"] = {
+    "nx_fcIfLinkFailures"                 :     (0,1),
+    "nx_fcIfSyncLosses"                   :     (0,1),
+    "nx_fcIfLinkResetIns"                 :     (0,1),
+    "nx_fcIfLinkResetOuts"                :     (0,1),
+}
+
+# Parser function so it can build usefull dictionary with all snmp_info
+# so it could be easier (for me as a non-developer!) to handle on the
+# inventory and check functions - any better development is welcome and
+# feel free to do it and share it back with the comunity
+
+def nx_fc_port_parser(info):
+    nx_fc_ports, fc_if64, ifxentry, cstats, frames, rtcredits = info
+    result = {}
+    for nx_index, linkfailures, synclosses, invalidcrcs, linkresetin, linkresetout, bbtxfromzero in nx_fc_ports:
+        nx_index = int(nx_index)
+        result[nx_index] = {
+                'fcIfLinkFailures'                      : linkfailures,
+                'fcIfSyncLosses'                        : synclosses,
+                'fcIfInvalidCrcs'                       : invalidcrcs,
+                'fcIfLinkResetIns'                      : linkresetin,
+                'fcIfLinkResetOuts'                     : linkresetout,
+                'fcIfBBCreditTransistionFromZero'       : bbtxfromzero
+        }
+    for if_index, if_name, if_type, if_operstatus, if_in, if_out in fc_if64:
+        if_index = int(if_index)
+        if if_index in result:
+            result[if_index].update({
+                    'IfName'            :       if_name,
+                    'IfType'            :       if_type,
+                    'IfOperStatus'      :       if_operstatus,
+                    'IfInOctets'        :       if_in,
+                    'IfOutOctets'       :       if_out
+            })
+    for ifaliasindex, ifalias in ifxentry:
+        ifaliasindex = int(ifaliasindex)
+        if ifaliasindex in result:
+            result[ifaliasindex].update({
+                'IfAlias'               :       ifalias
+            })
+    for cif_index, fccinframes, fccoutframes, cdiscard in cstats:
+        cif_index = int(cif_index)
+        result[cif_index].update({
+                'fcIfCInFrames'         :      fccinframes,
+                'fcIfCOutFrames'        :      fccoutframes,
+                'fcIfCDiscards'         :      cdiscard
+        })
+    for fif_index, framein, frameout in frames:
+        fif_index = int(fif_index)
+        result[fif_index].update({
+                'fcIfCfInFrames'        :       framein,
+                'fcIfCfOutFrames'       :       frameout
+        })
+    for rtindex, rxbcredit, txbcredit in rtcredits:
+        rtindex = int(rtindex)
+        result[rtindex].update({
+                'fcIfCurrRxBbCredit'    :       rxbcredit,
+                'fcIfCurrTxBbCredit'    :       txbcredit
+        })
+    return result
+
+# Inventory function with all the parsed stuff
+
+def inventory_cisco_nx_fcport(parsed):
+   inventory = []
+   for key, data in parsed.items():
+       # some internal port-channels dont report all the counters, so, to make sure only important FC ports are inventorized
+       if int(data["IfOperStatus"]) == 1 and len(data) == 19:
+           item = data["IfName"]
+           inventory.append((item , cisco_nx_fcport_default_levels))
+   return inventory
+
+def check_cisco_nx_fcport(item, params, parsed):
+    for key, data in parsed.items():
+        if data["IfName"] == item and len(data) == 19:
+            infotext = data["IfAlias"] + ' ' + data["IfName"]
+            status = 0
+            this_time = int(time.time())
+            perfdata = []
+            # Get the params so we can compare it further to crit and warn levels and output it
+            fcIfLinkFailures_thresh = params.get("nx_fcIfLinkFailures")
+            fcIfSyncLosses_thresh = params.get("nx_fcIfSyncLosses")
+            fcIfLinkResetIns_thresh = params.get("nx_fcIfLinkResetIns")
+            fcIfLinkResetOuts_thresh = params.get("nx_fcIfLinkResetOuts")
+            # I'll make all the counters this way so it could be handled with thresholds in the future.
+            nx_linkfailures = get_rate("cisco_nx_fcport.linkfailures.%s" % item, this_time, saveint(int(data["fcIfLinkFailures"])))
+            nx_synclosses = get_rate("cisco_nx_fcport.synclosses.%s" % item, this_time, saveint(int(data["fcIfSyncLosses"])))
+            nx_linkresetins = get_rate("cisco_nx_fcport.linkresetin.%s" % item, this_time, saveint(int(data["fcIfLinkResetIns"])))
+            nx_linkresetouts = get_rate("cisco_nx_fcport.linkresetout.%s" % item, this_time, saveint(int(data["fcIfLinkResetOuts"])))
+            # Check for linkfailures
+            if fcIfLinkFailures_thresh == None: # No levels - always OK
+                warn, crit = None,None
+            else:
+                warn, crit = fcIfLinkFailures_thresh
+                if nx_linkfailures >= crit:
+                    status = 2
+                    infotext += " | Link Failures : %s (!!) (warn: %s and crit: %s)" %  (nx_linkfailures, warn, crit)
+                elif nx_linkfailures > warn:
+                    status = 1
+                    infotext += " | Link Failures : %s (!) (warn: %s and crit: %s)" %  (nx_linkfailures, warn, crit)
+                else:
+                    infotext += " | Link Failures : %s " %  nx_linkfailures
+            # Check for sync losses
+            if fcIfSyncLosses_thresh == None: # No levels - always OK
+                warn, crit = None,None
+            else:
+                warn, crit = fcIfSyncLosses_thresh
+                if nx_synclosses >= crit:
+                    status = 2
+                    infotext += " | Sync Losses : %s (!!) (warn: %s and crit: %s)" %  (nx_synclosses, warn, crit)
+                elif nx_synclosses > warn:
+                    status = 1
+                    infotext += " | Sync Losses : %s (!) (warn: %s and crit: %s)" %  (nx_synclosses, warn, crit)
+                else:
+                    infotext += " | Sync Losses : %s " %  nx_synclosses
+            # Check for link reset (ins)
+            if fcIfLinkResetIns_thresh == None: # No levels - always OK
+                warn, crit = None,None
+            else:
+                warn, crit = fcIfLinkResetIns_thresh
+                if nx_linkresetins >= crit:
+                    status = 2
+                    infotext += " | Link Reset In : %s (!!) (warn: %s and crit: %s)" % (nx_linkresetins, warn, crit)
+                elif nx_linkresetins > warn:
+                    status =1
+                    infotext += " | Link Reset In : %s (!) (warn: %s and crit: %s)" % (nx_linkresetins, warn, crit)
+                else:
+                    infotext += " | Link Reset In : %s " % nx_linkresetins
+            # Check for link reset (outs)
+            if fcIfLinkResetOuts_thresh == None: # No levels - always OK
+                warn, crit = None,None
+            else:
+                warn, crit = fcIfLinkResetOuts_thresh
+                if nx_linkresetouts > crit:
+                    status = 2
+                    infotext += " | Link Reset Out : %s (!!) (warn: %s and crit: %s)" % (nx_linkresetouts, warn, crit)
+                elif nx_linkresetouts > warn:
+                    status = 1
+                    infotext += " | Link Reset Out : %s (!) (warn: %s and crit: %s)" % (nx_linkresetouts, warn, crit)
+                else:
+                    infotext += " | Link Reset Out : %s " % nx_linkresetouts
+
+            # Append all the perfdata retreived from the walk
+            # I'll be making try catch for the counters - some services get stale and think is about perfdata values
+
+            perfdata.append(( 'in'            , get_rate("cisco_nx_fcport.inoctets.%s" % item, this_time, saveint(int(data["IfInOctets"]))) ))
+            perfdata.append(( 'out'           , get_rate("cisco_nx_fcport.outoctets.%s" % item, this_time, saveint(int(data["IfOutOctets"]))) ))
+            perfdata.append(( 'InvalidCRCs'   , get_rate("cisco_nx_fcport.invalidcrcs.%s" % item, this_time, saveint(int(data["fcIfInvalidCrcs"]))) ))
+            perfdata.append(( 'LinkFailures'  , nx_linkfailures ))
+            perfdata.append(( 'SyncLosses'    , nx_synclosses ))
+            perfdata.append(( 'LinkResetIns'  , nx_linkresetins ))
+            perfdata.append(( 'LinkResetOuts' , nx_linkresetouts ))
+            perfdata.append(( 'TXBBFromZero'  , get_rate("cisco_nx_fcport.txbbfromzero.%s" % item, this_time, saveint(int(data["fcIfBBCreditTransistionFromZero"]))) ))
+            perfdata.append(( 'CFramesIn'     , get_rate("cisco_nx_fcport.cframesin.%s" % item, this_time, saveint(int(data["fcIfCInFrames"]))) ))
+            perfdata.append(( 'CFramesOut'    , get_rate("cisco_nx_fcport.cframesout.%s" % item, this_time, saveint(int(data["fcIfCOutFrames"]))) ))
+            perfdata.append(( 'C3Discards'    , get_rate("cisco_nx_fcport.cdiscards.%s" % item, this_time, saveint(int(data["fcIfCDiscards"]))) ))
+            perfdata.append(( 'FramesIn'      , get_rate("cisco_nx_fcport.fframesin.%s" % item, this_time, saveint(int(data["fcIfCfInFrames"]))) ))
+            perfdata.append(( 'FramesOut'     , get_rate("cisco_nx_fcport.fframesout.%s" % item, this_time, saveint(int(data["fcIfCfOutFrames"]))) ))
+            perfdata.append(( 'RXBCredits'    , get_rate("cisco_nx_fcport.rxbcredits.%s" % item, this_time, saveint(int(data["fcIfCurrRxBbCredit"]))) ))
+            perfdata.append(( 'TXBCredits'    , get_rate("cisco_nx_fcport.txbcredits.%s" % item, this_time, saveint(int(data["fcIfCurrTxBbCredit"]))) ))
+
+            if int(data["IfOperStatus"]) == 1:
+               # status will be returned considering previous validations on the linkfailures, losses, resets in and out.
+               infotext += " is online"
+               return (status, infotext , perfdata)
+            else:
+               # In this case it's always going to be critcal (link down)
+               infotext += " is down (!!)"
+               return (2, infotext , perfdata)
+
+    return (3, "Unknown - FC Port not returned on SNMPWalk")
+
+check_info["cisco_nx_fcport"] = {
+    'check_function':          check_cisco_nx_fcport,
+    'inventory_function':      inventory_cisco_nx_fcport,
+    'service_description':     'Cisco FC Port %s',
+    'has_perfdata':            True,
+    'parse_function':          nx_fc_port_parser,
+    'snmp_info':               [
+        ( '.1.3.6.1.4.1.9.9.289.1.2.1.1',[
+          OID_END,         # IFIndex
+          1,               # fcIfLinkFailures
+          2,               # fcIfSyncLosses
+          6,               # fcIfInvalidCrcs
+          9,               # fcIfLinkResetIns
+          10,              # fcIfLinkResetOuts
+          28,              # fcIfBBCreditTransistionFromZero
+        ]),
+        ( '.1.3.6.1.2.1', [
+          '2.2.1.1',       # if Index
+          '2.2.1.2',       # if Name
+          '2.2.1.3',       # ifType, needed to extract fibre channel ifs only (type 56)
+          '2.2.1.8',       # ifOperStatus
+          '2.2.1.10',      # ifInOctets
+          '2.2.1.16',      # ifOutOctets
+        ]),
+        ( '.1.3.6.1.2.1.31.1.1.1', [
+          OID_END,
+          18,               # IfAlias
+        ]),
+        ( '.1.3.6.1.4.1.9.9.289.1.2.3.1', [ # fcIfC3AccountingEntry
+          OID_END,
+          1,               # fcIfC3InFrames
+          2,               # fcIfC3OutFrames
+          5,               # fcIfC3Discards
+        ]),
+        ( ".1.3.6.1.4.1.9.9.289.1.2.4.1", [ # fcIfCfAccountingEntry
+          OID_END,
+          1,               # fcIfCfInFrames
+          2,               # fcIfCfOutFrames
+        ]),
+        ( ".1.3.6.1.4.1.9.9.289.1.2.5.1", [ # fcIfStatEntry
+          OID_END,
+          1,               # fcIfCurrRxBbCredit
+          2,               # fcIfCurrTxBbCredit
+        ]),
+    ],
+    'snmp_scan_function'     : lambda oid: oid(".1.3.6.1.2.1.1.1.0").lower().startswith("cisco nx-os"),
+    'default_levels_variable': 'cisco_nx_fcport_default_levels',
+    'group'                  : 'cisco_nx_fcport'
+}

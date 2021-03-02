@@ -1,0 +1,35 @@
+#!/usr/bin/python
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
+#
+# GDC - Monitorizacao Datacenter
+# FORTIGATE FORTIANALYSER Power Supply Status
+#
+# fmPowerEntry -  .1.3.6.1.4.1.12356.103.8.2.1
+#
+# snmpwalk -v2c -c <COMMUNITY> <IP>  .1.3.6.1.4.1.12356.103.8.2.1
+#  .1.3.6.1.4.1.12356.103.8.2.1
+# .1 # Index
+# .2 # Status
+#      FmPowerEntState (INTEGER) {unknown (-1), offline (0), online (1) }
+
+def inventory_fortianalyzer_psus(info):
+    inventory = []
+    for line in info:
+        inventory.append((line[0],None))
+    return inventory
+
+def check_fortianalyzer_psus(item, _no_params, info):
+    for line in info:
+       if line[0] == item:
+           status = int(line[1])
+           if status < 1:
+               return (2, "CRIT - Power Supply in critical state" )
+           else:
+               return (0, "OK - Power Supply is OK")
+    return (3, "UNKNOWN - Power Supply %s not found in SNMP Output" % item)
+
+check_info["fortianalyzer_psus"] = {
+    "check_function"        : check_fortianalyzer_psus,
+    "inventory_function"    : inventory_fortianalyzer_psus,
+    "service_description"   : "Power Supply - %s",
+    "snmp_info"             : ( ".1.3.6.1.4.1.12356.103.8.2.1", [ "1", "2" ] ) }

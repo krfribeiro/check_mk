@@ -1,0 +1,24 @@
+#!/usr/bin/python
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
+#Author : Ricardo.Ribeiro<at>Axians.com
+
+def inventory_rds_drains(info):
+   inventory = []
+   for line in info:
+        if line[1]:
+            inventory.append((line[1],None))
+   return inventory
+
+def check_rds_drains(item, params, info):
+   for line in info:
+      if line[1] == item:
+         status = line[2]
+         if status != "Yes":
+            return 2, "%s belonging to %s is not allowed to receive new connections (Reason: %s)" % (line[1],line[0],line[2])
+         else:
+            return 0, "%s belonging to %s is OK" % (line[1],line[0])
+
+check_info["rds_drains"] = {
+    'check_function':            check_rds_drains,
+    'inventory_function':        inventory_rds_drains,
+    'service_description':       'RDS %s Drain Status',

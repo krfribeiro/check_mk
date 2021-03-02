@@ -1,0 +1,71 @@
+#!/usr/bin/python
+# -*- encoding: utf-8; py-indent-offset: 4 -*-
+#
+# GDC - Monitorizacao Datacenter
+# A10 Networking Monitoring
+#
+#  axVirtualServerStatTable
+#
+# snmpwalk -On -v2c -c GIJOE 10.185.96.66 .1.3.6.1.4.1.22610.2.4.3.4.2.1
+#
+
+# .1.3.6.1.4.1.22610.2.4.3.4.2.1.1.2 - VirtSrvName
+# .1.3.6.1.4.1.22610.2.4.3.4.2.1.1.3 - PacketsIn
+# .1.3.6.1.4.1.22610.2.4.3.4.2.1.1.4 - BytesIn
+# .1.3.6.1.4.1.22610.2.4.3.4.2.1.1.5 - PacketsOut
+# .1.3.6.1.4.1.22610.2.4.3.4.2.1.1.6 - BytesOut
+# .1.3.6.1.4.1.22610.2.4.3.4.2.1.1.7 - PersistentCons
+# .1.3.6.1.4.1.22610.2.4.3.4.2.1.1.8 - TotalCons
+# .1.3.6.1.4.1.22610.2.4.3.4.2.1.1.9 - CurrentCons
+# .1.3.6.1.4.1.22610.2.4.3.4.2.1.1.10 - VirtSrvStatus
+# .1.3.6.1.4.1.22610.2.4.3.4.2.1.1.12 - TotalL7Reqs
+# .1.3.6.1.4.1.22610.2.4.3.4.2.1.1.15 - PeakCons
+
+def inventory_a10virtSrv(info):
+    inventory = []
+    for line in info:
+        inventory.append((line[0],None))
+    return inventory
+
+def check_a10virtSrv(item, _no_params, info):
+    for line in info:
+       if line[0] == item:
+           this_time = int(time.time())
+           status = int(line[8])
+           packets_in = get_rate("a10_virtsrv.packetsin.%s" % item, this_time, saveint(line[1]))
+           packets_out = get_rate("a10_virtsrv.packetsout.%s" % item, this_time, saveint(line[3]))
+           bytes_in = get_rate("a10_virtsrv.bytesin.%s" % item, this_time, saveint(line[2]))
+           bytes_out = get_rate("a10_virtsrv.bytesout.%s" % item, this_time, saveint(line[4]))
+           persistant_cons = get_rate("a10_virtsrv.persistantcons.%s" % item, this_time, saveint(line[5]))
+           total_cons = get_rate("a10_virtsrv.totalcons.%s" % item, this_time, saveint(line[6]))
+           peak_cons = get_rate("a10_virtsrv.peakcons.%s" % item, this_time, saveint(line[10]))
+           current_cons = int(line[7])
+           total_l7_reqs = get_rate("a10_virtsrv.totall7reqs.%s" % item, this_time, saveint(line[9]))
+           perf = [
+               ("packetsin",packets_in),
+               ("packetsout",packets_out),
+               ("bytesin",bytes_in),
+               ("bytesout",bytes_out),
+               ("persistantcons",persistant_cons),
+               ("totalcons",total_cons),
+               ("peakcons",peak_cons),
+               ("currentcons", current_cons),
+               ("totall7reqs",total_l7_reqs),
+           ]
+           if status == 0:
+               return (1, "WARN - Virtual Server is disabled", perf)
+           elif status == 1:
+               return (0, "OK - Virtual Server is up and available", perf)
+           elif status == 2:
+               return (2, "CRIT - Virtual Server is currently not available", perf)
+           else:
+               return (3, "UNKNOWN")
+    return (3, "UNKNOWN - Virtual Server %s not found in SNMP output" % item)
+
+check_info["a10virtSrv"] = {
+    "check_function"        : check_a10virtSrv,
+    "inventory_function"    : inventory_a10virtSrv,
+    "service_description"   : "A10 VirtSRV - %s",
+    "has_perfdata":         True,
+    "snmp_info"             : ( ".1.3.6.1.4.1.22610.2.4.3.4.2.1.1", [ "2", "3", "4", "5", "6", "7", "8", "9", "10", "12", "15" ] ) }
+
