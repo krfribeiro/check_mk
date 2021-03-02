@@ -1,15 +1,10 @@
 #!/usr/bin/env python
 import os, sys, time, subprocess, json, requests, datetime, hashlib, hmac, base64
 
-# HTTP/HTTPS Proxies - If you need some ... #
-
-os.environ["HTTP_PROXY"] = 'http://10.144.36.1:8080/'
-os.environ["HTTPS_PROXY"] = 'https://10.144.36.1:8080/'
-
 # OMS Related Variables #
-customer_id = '66449870-a786-44f3-973e-dc9bf3f56a64'
-shared_key = "dNtkVNvUmeaNSZMFW4iyRxrrmkuf7z12sdCiBKBTDN608/mVHxuOd6eqPbpRV/UhL+jKk+6wBcGzxKAlttYegw=="
-log_type = 'TESTMKALERTS'
+customer_id = os.environ['NOTIFY_PARAMETER_1']
+shared_key = os.environ['NOTIFY_PARAMETER_2']
+log_type = os.environ['NOTIFY_PARAMETER_3']
 
 # OMS Related Functions #
 
@@ -48,26 +43,12 @@ def post_data(customer_id, shared_key, body, log_type):
 
 # MK Alert Handling #
 
-# MK_HOSTNAME = os.environ['NOTIFY_HOSTNAME']
-# MK_DESCRIPTION = os.environ['NOTIFY_SERVICEOUTPUT']
-# MK_PLUGIN_OUTPUT = os.environ['NOTIFY_SERVICEDESC']
-# MK_LAST_STATE_CHANGE = time.strftime("%Y-%m-%d %H:%M:%S")
-# MK_SERVICESTATE = os.environ['NOTIFY_SERVICESTATE']
-
-MK_HOSTNAME = "WSDPSCDB005"
-MK_DESCRIPTION = "Memory utilization"
-MK_PLUGIN_OUTPUT = "Memory is high"
+MK_HOSTNAME = os.environ['NOTIFY_HOSTNAME']
+MK_DESCRIPTION = os.environ['NOTIFY_SERVICEOUTPUT']
+MK_PLUGIN_OUTPUT = os.environ['NOTIFY_SERVICEDESC']
 MK_LAST_STATE_CHANGE = time.strftime("%Y-%m-%d %H:%M:%S")
-MK_SERVICESTATE = "CRITICAL"
+MK_SERVICESTATE = os.environ['NOTIFY_SERVICESTATE']
 
-BASH_COMMAND="grep '%s;' mk_inventorydata | awk -F ';' '{print $2\",\"$3\",\"$4\",\"$5}'" % MK_HOSTNAME
-NEW_INFO = subprocess.check_output(['bash','-c',BASH_COMMAND])
-
-MK_HOST_IP = NEW_INFO.split(",")[0]
-MK_DATACENTER = NEW_INFO.split(",")[1]
-MK_TEAM = NEW_INFO.split(",")[2]
-MK_VENDOR = NEW_INFO.split(",")[3].replace('\n','')
-
-MK_JSON_OUTPUT = json.dumps([{'mk_hostname': MK_HOSTNAME, 'mk_description': MK_DESCRIPTION, 'mk_plugin_output': MK_PLUGIN_OUTPUT, 'mk_last_state_chage': MK_LAST_STATE_CHANGE, 'mk_servicestate': MK_SERVICESTATE, 'mk_host_ip': MK_HOST_IP, 'mk_team': MK_TEAM, 'mk_datacenter': MK_DATACENTER, 'mk_vendor': MK_VENDOR }])
+MK_JSON_OUTPUT = json.dumps([{'mk_hostname': MK_HOSTNAME, 'mk_description': MK_DESCRIPTION, 'mk_plugin_output': MK_PLUGIN_OUTPUT, 'mk_last_state_chage': MK_LAST_STATE_CHANGE, 'mk_servicestate': MK_SERVICESTATE }])
 
 post_data(customer_id, shared_key, MK_JSON_OUTPUT, log_type)
