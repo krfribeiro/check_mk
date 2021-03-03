@@ -92,7 +92,7 @@ try:
 
     for item in namesLoad:
         for entry in namesLoad[item]:
-            finalDict  = { line["string"][0] : line["string"][1] for line in namesLoad[item][entry]}
+            finalDict  = { line["string"][0] : line["string"][1].replace(' ','_') for line in namesLoad[item][entry]}
 
     statsLoad = convertXMLtoJSON(stats.content)
 
