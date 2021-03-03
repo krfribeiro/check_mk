@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+# Author : ricardoftribeiro@gmail.com @krfribeiro
+# -*- coding: utf-8 -*-
+
+# <<<vmax_pools>>>
+# FLASH 7.74
+# FC 79.38
+# SATA 72.54
+
+vmax_pools_default_levels = {
+	"space" : (85,90)
+}
+
+def inventory_vmax_pools(info):
+    return [ ( x[0], 'vmax_pools_default_levels' ) for x in info  ]
+
+def check_vmax_pools(item, params, info):
+    for pool, space in info:
+        if pool == item:
+            warn, crit = params['space']
+            space = saveint(space)
+            message = "%d Used Space" % space
+            perf = [ ( "pool", space, warn, crit ) ]
+            if space >= crit:
+                return 2, message, perf
+            if space >= warn:
+                return 1, message, perf
+            return 0, message, perf
+
+check_info["vmax_pools"] = {
+    "group"                 : "websphere_mq",
+    "check_function"        : check_vmax_pools,
+    "inventory_function"    : inventory_vmax_pools,
+    "service_description"   : "VMAX Pools Used Space",
+    "has_perfdata"          : True,
+}

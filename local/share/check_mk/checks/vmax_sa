@@ -1,0 +1,38 @@
+#!/usr/bin/env python
+# Author : ricardoftribeiro@gmail.com @krfribeiro
+# -*- coding: utf-8 -*-
+#
+# VMAX Check (For Check_MK)
+# Tested Environmnet
+# - OMD 1.20
+#
+# <<<vmax_sa>>>
+# FA-3H Online
+# SE-4H Online
+
+def inventory_vmax_sa(info):
+	inventory = []
+	for line in info:
+		mysite = line[0] 
+		if len(line) > 0:
+			inventory.append( (mysite, None)  )
+	return inventory
+
+def check_vmax_sa(item, _unused, info):
+	for line in info:
+		if line[0] != item:
+			continue
+		mystate = line[1]
+		mysite = line[0]
+		if mystate == "Online": 
+			return (0, 'OK ' + "".join(item) + " " + "".join(mystate))
+		else:
+			return (2, 'FAIL ' + "".join(item) + " " + "".join(mystate))
+	return (3, "UNKNWON - % line")
+
+check_info["vmax_sa"] = {
+	'check_function':	check_vmax_sa,
+	'inventory_function':	inventory_vmax_sa,
+	'service_description':	'VMAX iSCSI Port Status %s',
+	'has_perfdata':		False,
+}

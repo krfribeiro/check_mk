@@ -1,0 +1,33 @@
+#!/usr/bin/env python
+# Author : ricardoftribeiro@gmail.com @krfribeiro
+# -*- coding: utf-8 -*-
+# <<<bmc_control_m_status>>>
+# Unix_Ping_to_Server_Platform Succeeded
+# Agent_Ping_to_Control-M/Server Succeeded
+# Agent_Router Not
+# Agent_Listener Running
+# Agent_Tracker Not
+# Agent_Tracker-Worker Running
+
+def inventory_bmc_control_m_status(info):
+	return [ ( x[0], 'None' ) for x in info  ]
+
+def check_bmc_control_m_status(item, _unused, info):
+        for line in info:
+                if line[0] != item:
+                       continue
+                mystate = line[1]
+                mylistener = line[0]
+		if mystate not in [ 'Running', 'Succeeded' ]:
+			mystate = 'Not Running'
+                        return (2, 'FAIL - ' + "".join(item) + " is " + "".join(mystate))
+                else:
+                        return (0, 'OK - ' + "".join(item) + " is " + "".join(mystate))
+        return (3, "UNKNWON - % line")
+
+check_info["bmc_control_m_status"] = {
+        'check_function':       check_bmc_control_m_status,
+        'inventory_function':   inventory_bmc_control_m_status,
+        'service_description':  'CTRL-M %s Status',
+        'has_perfdata':         False,
+}

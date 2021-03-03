@@ -1,0 +1,31 @@
+#!/usr/bin/env python
+# Author : ricardoftribeiro@gmail.com @krfribeiro
+# -*- coding: utf-8 -*-
+# Example output from agent:
+#<<<windows_scheduled_tasks>>>
+#\BgInfo 0 2014-10-23T15:16:16 -
+#\OptimizeStartMenuCacheFiles-S-1-5-21-986351219-4098247298-2897652773-500 0 2013-12-20T16:26:26 -
+#\CheckBusiness 0 2014-10-21T11:00:00 2014-10-23T17:00:00
+#\PurgeReportsTask 0 2014-10-23T04:00:00 2014-10-24T04:00:00
+
+def inventory_windows_scheduled_tasks(info):
+        return [ ( x[0], 'None' ) for x in info  ]
+
+def check_windows_scheduled_tasks(item, _unused, info):
+    for line in info:
+        if line[0] != item:
+            continue
+        task = line[0]
+        status = line[1]
+        if status == '0':
+            return (0, 'OK - Last Run ' + "".join(line[2]) + "; Next Run " + "".join(line[3]))
+        else:
+            return (2, 'FAIL - Error Code ' + "".join(line[1]) + '; Last Run ' + "".join(line[2]) + "; Next Run " + "".join(line[3]))
+    return (3, 'UNKNWON - %', line)
+
+check_info["windows_scheduled_tasks"] = {
+    "check_function"        : check_windows_scheduled_tasks,
+    "inventory_function"    : inventory_windows_scheduled_tasks,
+    "service_description"   : "Task %s",
+    "has_perfdata"          : False,
+}

@@ -1,0 +1,32 @@
+#!/usr/bin/env python
+# Author : ricardoftribeiro@gmail.com @krfribeiro
+# -*- coding: utf-8 -*-
+# <<<windows_unexpected_shutdown>>>
+# 0 No unexpected shutdown in last 6h.
+# 1 The previous system shutdown at 11:00:00 on 26/08/2014 was unexpected.
+
+def inventory_windows_unexpected_shutdown(info):
+        inventory = []
+        for line in info:
+                myitem = "Windows Unex.Shutdown" 
+                if len(line) > 0:
+                        inventory.append( (myitem, None)  )
+        return inventory
+
+def check_windows_unexpected_shutdown(item, _unused, info):
+        for line in info:
+                mystatus = line[0]
+                if mystatus == "0":
+                        return (0, 'OK ' + "No unexpected shutdown in last 6h.")
+		elif mystatus == "1":
+                        return (1, 'WARN ' + "There was a unexpected shutdown but not in last 6h.") 
+                else:
+                        return (2, 'NOT OK ' + "The previous system shutdown was unexpected")
+        return (3, "UNKNWON - % line")
+
+check_info["windows_unexpected_shutdown"] = {
+        'check_function':       check_windows_unexpected_shutdown,
+        'inventory_function':   inventory_windows_unexpected_shutdown,
+        'service_description':  '%s',
+        'has_perfdata':         False,
+}
