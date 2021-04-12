@@ -12,10 +12,10 @@ context = dict([ (var[7:], value.decode("utf-8"))
                   if var.startswith("NOTIFY_")])
 
 if 'PARAMETER_WEBHOOK' in context:
-	msteams_path = context["PARAMETER_WEBHOOK"]
+    msteams_path = context["PARAMETER_WEBHOOK"]
 else:
-  sys.stderr.write("Webhook URL not set\n")
-  return 2
+    sys.stderr.write("Webhook URL not set\n")
+    return 2
 
 if 'URL_PREFIX' in context:
     baseURL=re.sub('/$','',context['PARAMETER_URL'])
