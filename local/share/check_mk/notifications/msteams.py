@@ -15,7 +15,7 @@ if 'PARAMETER_WEBHOOK' in context:
     msteams_path = context["PARAMETER_WEBHOOK"]
 else:
     sys.stderr.write("Webhook URL not set\n")
-    return 2
+    sys.exit(2)
 
 if 'URL_PREFIX' in context:
     baseURL=re.sub('/$','',context['PARAMETER_URL'])
@@ -130,7 +130,7 @@ data = {
 conn = requests.post(msteams_path, data = json.dumps(data))
 
 if conn.status_code == 200:
-  return 0
+  sys.exit(0)
 else:
   sys.stderr.write(conn.text)
-  return 2
+  sys.exit(2)
