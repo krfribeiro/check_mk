@@ -55,13 +55,13 @@ def check_mirth_stats(item, params, info):
 		
 	  		if int(line[5]) >= int(que_crit):
 				status_code = 2
-				que_outmessage = "Queued : %s (!!)" % ( line[3] )
+				que_outmessage = "Queued : %s (!!)" % ( line[5] )
 	  		elif int(line[5]) >= int(que_warn):
 				status_code = max(1, status_code)
-				que_outmessage = "Queued : %s (!)" % ( line[3] )
+				que_outmessage = "Queued : %s (!)" % ( line[5] )
 	  		else:
 				status_code = max(0, status_code)
-				que_outmessage = "Queued : %s" % ( line[4] )
+				que_outmessage = "Queued : %s" % ( line[5] )
 
 			outmessage="%s | Received : %s | %s | Filtered: %s | %s | Sent: %s" % ( state_message, line[2], err_outmessage , line[4] , que_outmessage , line[6] )
 			
