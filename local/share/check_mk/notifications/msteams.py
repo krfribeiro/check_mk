@@ -17,8 +17,8 @@ else:
     sys.stderr.write("Webhook URL not set\n")
     sys.exit(2)
 
-if 'URL_PREFIX' in context:
-    baseURL=re.sub('/$','',context['PARAMETER_URL'])
+if 'PARAMETER_URL_PREFIX' in context:
+    baseURL=re.sub('/$','',context['PARAMETER_URL_PREFIX'])
 else:
     baseURL="https://" + context['MONITORING_HOST'] + "/" + context['OMD_SITE']
 
