@@ -11,6 +11,17 @@ context = dict([ (var[7:], value.decode("utf-8"))
                   for (var, value) in os.environ.items()
                   if var.startswith("NOTIFY_")])
 
+map_states = {
+        "OK":           ("ok.png","2eb886" ),
+        "WARNING":      ("warning.png","daa038" ),
+        "CRITICAL":     ("critical.png","a30200" ),
+        "UNKNOWN":      ("unknown.png","cccccc" ),
+        "DOWN":         ("critical.png","a30200" ),
+        "UP":           ("ok.png","2eb886" ),
+}
+
+regexp = re.compile(r'CRITICAL|WARNING|UNKNOWN|OK|DOWN|UP')
+
 if 'PARAMETER_WEBHOOK' in context:
     msteams_path = context["PARAMETER_WEBHOOK"]
 else:
@@ -39,28 +50,15 @@ if context['WHAT'] == 'SERVICE':
         colour = "439FE0"
         message += " - Downtime started"
     elif context['NOTIFICATIONTYPE'] == 'DOWNTIMEEND':
-      	icon = "downtime.png"
-      	colour = "33cccc"
-      	message += " - Downtime ended"
+        icon = "downtime.png"
+        colour = "33cccc"
+        message += " - Downtime ended"
     elif context['NOTIFICATIONTYPE'] == 'ACKNOWLEDGEMENT':
-      	icon = "acknowledge.png"
-      	colour = "8f006b"
-      	message += " | " + context['SERVICEACKCOMMENT']
-    elif context['SERVICESTATE'] ==  'CRITICAL':
-      	icon = "critical.png"
-      	colour = "a30200"
-      	message += " is " + context['SERVICESTATE']
-    elif context['SERVICESTATE'] ==  'WARNING':
-      	icon = "warning.png"
-      	colour = "daa038"
-      	message += " is " + context['SERVICESTATE']
-    elif context['SERVICESTATE'] ==  'UNKNOWN':
-      	icon = "unknown.png"
-      	colour = "cccccc"
-      	message += " is " + context['SERVICESTATE']
-    elif context['SERVICESTATE'] ==  'OK':
-        icon = "ok.png"
-        colour = "2eb886"
+        icon = "acknowledge.png"
+        colour = "8f006b"
+        message += " | " + context['SERVICEACKCOMMENT']
+    elif regexp.search(context['SERVICESTATE']):
+        icon, colour = map_states.get(context['SERVICESTATE'])
         message += " is " + context['SERVICESTATE']
     else:
         icon = "cmk.png"
@@ -69,33 +67,23 @@ else:
     context['DETAILS_OUTPUT'] = context['HOSTOUTPUT']
     infoURL = baseURL + context['HOSTURL']
     if context['NOTIFICATIONAUTHOR'] != '':
-      	authorText += "Triggered by **" + context['NOTIFICATIONAUTHOR'] + "** - *" + context['NOTIFICATIONCOMMENT']  + "*"
+        authorText += "Triggered by **" + context['NOTIFICATIONAUTHOR'] + "** - *" + context['NOTIFICATIONCOMMENT']  + "*"
     if context['NOTIFICATIONTYPE'] == 'DOWNTIMESTART':
-      	icon = "downtime.png"
-      	colour = "439FE0"
-      	message += " - Downtime started"
+        icon = "downtime.png"
+        colour = "439FE0"
+        message += " - Downtime started"
     elif context['NOTIFICATIONTYPE'] == 'DOWNTIMEEND':
-      	icon = "downtime.png"
-      	colour = "33cccc"
-      	message += " - Downtime ended"
+        icon = "downtime.png"
+        colour = "33cccc"
+        message += " - Downtime ended"
     elif context['NOTIFICATIONTYPE'] == 'ACKNOWLEDGEMENT':
-      	icon = "acknowledge.png"
-      	colour = "8f006b"
-      	message += " | " + context['HOSTACKCOMMENT']
-    elif context['HOSTSTATE'] ==  'DOWN':
-      	icon = "critical.png"
-      	colour = "a30200"
-    elif context['HOSTSTATE'] ==  'WARNING':
-      	icon = "warning.png"
-      	colour = "daa038"
-    elif context['HOSTSTATE'] ==  'UNKNOWN':
-      	icon = "unknown.png"
-      	colour = "cccccc"
-    elif context['HOSTSTATE'] ==  'UP':
-      	icon = "ok.png"
-      	colour = "2eb886"
+        icon = "acknowledge.png"
+        colour = "8f006b"
+        message += " | " + context['HOSTACKCOMMENT']
+    elif regexp.search(context['HOSTSTATE']):
+        icon, colour = map_states.get(context['HOSTSTATE'])
     else:
-      	icon = "cmk.png"
+        icon = "cmk.png"
 
 sections = {
         "activitySubtitle": authorText,
@@ -115,7 +103,7 @@ data = {
     "@context": "http://schema.org/extensions",
         "title": message,
     "themeColor": colour,
-    "summary": "Summary",
+    "summary": message,
     "sections": [sections],
     "potentialAction": [{
         "@type": "OpenUri",
