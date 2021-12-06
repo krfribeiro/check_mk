@@ -1,0 +1,224 @@
+#!/usr/bin/env python3
+# Telegram Notification
+# Bulk: yes
+# Author : ricardoftribeiro@gmail.com @krfribeiro
+
+import os, re, sys
+import ssl
+import base64
+import json
+import requests
+from sys import stderr, exit as s_exit
+from urllib.parse import quote
+from urllib.request import urlopen
+from cmk.notification_plugins import utils
+import cmk.utils.site as site
+
+ctx = ssl.create_default_context()
+ctx.check_hostname = False
+ctx.verify_mode = ssl.CERT_NONE
+bulk_mode = '--bulk' in sys.argv
+
+tmpl_host_subject = '$HOSTNAME$ - $EVENT_TXT$'
+tmpl_service_subject = '$HOSTNAME$/$SERVICEDESC$ $EVENT_TXT$'
+
+tmpl_common_body = """Host:     $HOSTNAME$
+Alias:    $HOSTALIAS$
+Address:  $HOSTADDRESS$
+"""
+
+tmpl_host_body = """Event:    $EVENT_TXT$
+Output:   $HOSTOUTPUT$
+$LONGHOSTOUTPUT$
+"""
+
+tmpl_service_body = """Service:  $SERVICEDESC$
+Event:    $EVENT_TXT$
+Output:   $SERVICEOUTPUT$
+$LONGSERVICEOUTPUT$
+"""
+
+tmpl_alerthandler_host_body = """Alert handler: $ALERTHANDLERNAME$
+Handler output: $ALERTHANDLEROUTPUT$
+"""
+
+tmpl_alerthandler_service_body = "Service:  $SERVICEDESC$\n" + tmpl_alerthandler_host_body
+
+def construct_content(context):
+    notification_type = context["NOTIFICATIONTYPE"]
+    if notification_type in ["PROBLEM", "RECOVERY"]:
+        txt_info = "$PREVIOUS@HARDSHORTSTATE$ -> $@SHORTSTATE$"
+
+    elif notification_type.startswith("FLAP"):
+        if "START" in notification_type:
+            txt_info = "Started Flapping"
+        else:
+            txt_info = "Stopped Flapping ($@SHORTSTATE$)"
+
+    elif notification_type.startswith("DOWNTIME"):
+        what = notification_type[8:].title()
+        txt_info = "Downtime " + what + " ($@SHORTSTATE$)"
+
+    elif notification_type == "ACKNOWLEDGEMENT":
+        txt_info = "Acknowledged ($@SHORTSTATE$)"
+
+    elif notification_type == "CUSTOM":
+        txt_info = "Custom Notification ($@SHORTSTATE$)"
+
+    else:
+        txt_info = notification_type
+
+    txt_info = utils.substitute_context(txt_info.replace("@", context["WHAT"]), context)
+
+    context["EVENT_TXT"] = txt_info
+    if "PARAMETER_COMMON_BODY" in context:
+        tmpl_body = context['PARAMETER_COMMON_BODY']
+    else:
+        tmpl_body = tmpl_common_body
+
+    if "ALERTHANDLERNAME" in context:
+        my_tmpl_host_body = tmpl_alerthandler_host_body
+        my_tmpl_service_body = tmpl_alerthandler_service_body
+    else:
+        my_tmpl_host_body = tmpl_host_body
+        my_tmpl_service_body = tmpl_service_body
+
+    if context['WHAT'] == 'HOST':
+        if "PARAMETER_HOST_BODY" in context:
+            tmpl_body += context["PARAMETER_HOST_BODY"]
+        else:
+            tmpl_body += my_tmpl_host_body
+    else:
+        if "PARAMETER_SERVICE_BODY" in context:
+            tmpl_body += context["PARAMETER_SERVICE_BODY"]
+        else:
+            tmpl_body += my_tmpl_service_body
+
+    body = utils.substitute_context(tmpl_body, context)
+
+    return body
+
+def getGraphs(context):
+    if context["WHAT"] != "SERVICE":
+        context["SERVICEDESC"] = "_HOST_"
+
+    url = "http://localhost:%d/%s/check_mk/ajax_graph_images.py" % (
+        site.get_apache_port(),
+        os.environ["OMD_SITE"],
+    )
+
+    try:
+        json_data = requests.get(url, {
+            "host": context["HOSTNAME"],
+            "service": context["SERVICEDESC"],
+            "num_graphs": 10
+        }).json()
+    except Exception as e:
+        stderr.write("ERROR: Failed to fetch graphs: %s\nURL: %s\n" %
+                     (e, url))
+        return []
+
+    attachments = []
+    for i, base64_source in enumerate(json_data):
+        filename = '%s-%s-%d.png' % (context["HOSTNAME"], context["SERVICEDESC"], i)
+        attachments.append((filename, base64.b64decode(base64_source)))
+
+    return attachments
+
+
+def main():
+    hasGraphs = True
+    attachments = []
+    if bulk_mode:
+        content_txt = ""
+        parameters, contexts = utils.read_bulk_contexts()
+        hosts = set()
+        for context in contexts:
+            context.update(parameters)
+            content_txt += construct_content(context)
+            hosts.add(context["HOSTNAME"])
+        if len(contexts) > 1:
+            subject = utils.get_bulk_notification_subject(contexts, hosts)
+            hasGraphs = False
+    else:
+        context = utils.collect_context()
+        content_txt = construct_content(context)
+
+    if 'PARAMETER_TOKEN' in context:
+        telegram_api_token = context["PARAMETER_TOKEN"]
+    else:
+        sys.stderr.write("Token not set\n")
+        sys.exit(2)
+
+    if 'PARAMETER_CHAT_ID' in context:
+        telegram_api_chat_id = context["PARAMETER_CHAT_ID"]
+    else:
+        sys.stderr.write("ChatID not set\n")
+        sys.exit(2)
+        
+    if hasGraphs == True:
+        attachments = getGraphs(context)
+
+    def base_url(endpoint):
+        return "https://api.telegram.org/bot%s/%s" % (telegram_api_token, endpoint)
+
+    def api_command(endpoint, files=None, **kwargs):
+        json_data = dict({"chat_id": telegram_api_chat_id}, **kwargs)
+        if not files:
+            response = requests.post(url=base_url(endpoint),json=json_data,files=files)
+        else:
+            response = requests.post(url=base_url(endpoint),data=json_data,files=files)
+
+        if response.status_code != 200:
+            raise Exception(
+                    "%i: %s -> Unable to call %s. JSON Data: %s, Files: %s" % (
+                        int(response.status_code),
+                        response.reason,
+                        base_url(endpoint),
+                        repr(json_data),
+                        str(files)[:50]))
+
+    def send_message(text):
+        api_command(
+                "sendMessage", **{
+                "text": text,
+                "disable_web_page_preview": True
+                })
+
+    def send_photo(caption, photo_data):
+        api_command("sendPhoto",
+                files={"photo": photo_data},
+                **{
+                    "caption": caption
+                    })
+
+    def send_mediagroup(photo_data, media_description):
+        api_command("sendMediaGroup",
+            files=photo_data,
+            **{
+                "disable_notification": True,
+                "media": json.dumps(media_description)
+                })
+    
+    if len(attachments) == 1:
+        att_data = attachments[0]
+        send_photo(content_txt, att_data)
+    elif len(attachments) > 1:
+        telegram_media = []
+        media_data = {}
+        for att_name, att_data in attachments:
+            telegram_media.append({
+                "type": "photo",
+                "media": "attach://%s" % att_name
+            })
+            media_data[att_name] = att_data
+
+        telegram_media[-1].update({
+            "caption": content_txt
+        })
+        send_mediagroup(media_data, telegram_media)
+    else:
+        send_message(content_txt)
+
+if __name__ == "__main__":
+    main()
