@@ -185,7 +185,6 @@ def main():
                 "disable_notification": True,
                 "media": json.dumps(media_description)
                 })
-
     if "\n" in content_txt:
         content_txt = content_txt.replace('\\n', '\n').replace('\\t', '\t')
     
