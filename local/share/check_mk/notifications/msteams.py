@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # MS-Teams
 # Author : ricardoftribeiro@gmail.com @krfribeiro
 
@@ -8,7 +8,7 @@ import json
 import re
 
 context = dict([ (var[7:], value.decode("utf-8"))
-                  for (var, value) in os.environ.items()
+                  for (var, value) in list(os.environ.items())
                   if var.startswith("NOTIFY_")])
 
 map_states = {
