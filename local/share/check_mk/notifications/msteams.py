@@ -7,7 +7,7 @@ import requests
 import json
 import re
 
-context = dict([ (var[7:], value.decode("utf-8"))
+context = dict([ (var[7:], value)
                   for (var, value) in list(os.environ.items())
                   if var.startswith("NOTIFY_")])
 
