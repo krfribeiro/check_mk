@@ -2,6 +2,8 @@
 # -*- encoding: utf-8; py-indent-offset: 4 -*-
 # Author : ricardoftribeiro@gmail.com @krfribeiro
 
+from cmk.gui.plugins.wato import HTTPProxyReference
+
 register_notification_parameters("msteams", Dictionary(
     elements = [
         ("url_prefix",
@@ -19,6 +21,9 @@ register_notification_parameters("msteams", Dictionary(
             help = _("MS-Teams Channel webhook URL"),
             allow_empty = False,
         )),
+        ("proxy_url", Transform(
+            HTTPProxyReference(),
+            forth=lambda v: ("url", v) if isinstance(v, str) else v,
+        )),
     ]
 ))
-

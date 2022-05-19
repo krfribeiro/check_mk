@@ -22,6 +22,9 @@ map_states = {
 
 regexp = re.compile(r'CRITICAL|WARNING|UNKNOWN|OK|DOWN|UP')
 
+proxy_url = context.get("PARAMETER_PROXY_URL")
+proxies = {"https": proxy_url } if proxy_url else None
+
 if 'PARAMETER_WEBHOOK' in context:
     msteams_path = context["PARAMETER_WEBHOOK"]
 else:
@@ -115,7 +118,7 @@ data = {
     }]
 }
 
-conn = requests.post(msteams_path, data = json.dumps(data))
+conn = requests.post(msteams_path, proxies=proxies, data = json.dumps(data))
 
 if conn.status_code == 200:
   sys.exit(0)
