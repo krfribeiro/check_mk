@@ -41,6 +41,7 @@ icons_path = "https://github.com/krfribeiro/check_mk/raw/master/local/share/chec
 headers = {"Content-type": "application/json", "Accept": "text/plain"}
 message = context['NOTIFICATIONTYPE']  + ' | Hostname : ' + context['HOSTNAME'] + " "
 authorText = ""
+colour = "ffffff"
 
 if context['WHAT'] == 'SERVICE':
     message += "| Service: " + context['SERVICEDESC']
