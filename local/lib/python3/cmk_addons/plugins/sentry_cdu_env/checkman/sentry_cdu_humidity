@@ -1,0 +1,24 @@
+title: Server Technology Sentry PDU/CDU: Humidity sensors
+agents: snmp
+catalog: hw/power/servertech
+license: GPLv2
+distribution: check_mk
+description:
+ Monitors the humidity sensors (external probes) of Server Technology
+ Sentry PDUs/CDUs. Both MIB generations are supported: Sentry3-MIB devices
+ (e.g. "Sentry Smart CDU", sysObjectID .1.3.6.1.4.1.1718.3) and Sentry4-MIB
+ devices (sysObjectID .1.3.6.1.4.1.1718.4).
+
+ By default the thresholds configured on the device are used. If the rule
+ "Humidity Levels" sets upper and/or lower levels for the service, only the
+ levels from the rule are applied.
+
+ Sensor problems reported by the device (lost, read error, no communication)
+ are shown as CRIT.
+
+item:
+ The sensor ID followed by the sensor name, e.g. {A1 Temp_Humid_Sensor_A1}.
+
+discovery:
+ One service is created for each connected humidity sensor. Temperature-only
+ probes and sensor slots reported as "not found" are ignored.

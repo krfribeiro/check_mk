@@ -1,0 +1,25 @@
+title: Server Technology Sentry PDU/CDU: Temperature sensors
+agents: snmp
+catalog: hw/power/servertech
+license: GPLv2
+distribution: check_mk
+description:
+ Monitors the temperature sensors (external probes) of Server Technology
+ Sentry PDUs/CDUs. Both MIB generations are supported: Sentry3-MIB devices
+ (e.g. "Sentry Smart CDU", "Sentry Switched CDU", sysObjectID .1.3.6.1.4.1.1718.3)
+ and Sentry4-MIB devices (sysObjectID .1.3.6.1.4.1.1718.4).
+
+ By default the thresholds configured on the device are used (Sentry3: low/high
+ threshold, Sentry4: low/high warning and alarm). They can be overridden with
+ the standard rule "Temperature", which also offers output unit, trend
+ computation and the device-level handling mode.
+
+ Sensor problems reported by the device (lost, read error, no communication)
+ are shown as CRIT. Values in Fahrenheit are converted automatically.
+
+item:
+ The sensor ID followed by the sensor name, e.g. {A1 Temp_Humid_Sensor_A1}.
+
+discovery:
+ One service is created for each connected temperature sensor. Sensor slots
+ reported as "not found" are ignored.
