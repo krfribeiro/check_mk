@@ -42,6 +42,7 @@ from cmk.agent_based.v2 import (
     render,
     Result,
     Service,
+    SimpleSNMPSection,
     SNMPSection,
     SNMPTree,
     startswith,
@@ -197,7 +198,7 @@ def parse_sentry3_env(string_table: StringTable) -> Section | None:
     return Section(temperature=temperature, humidity=humidity)
 
 
-snmp_section_sentry3_env = SNMPSection(
+snmp_section_sentry3_env = SimpleSNMPSection(
     name="sentry3_cdu_env",
     parsed_section_name="sentry_cdu_env",
     detect=startswith(".1.3.6.1.2.1.1.2.0", ".1.3.6.1.4.1.1718.3"),
