@@ -34,6 +34,10 @@ def parse_arguments(argv):
         help="Password store reference '<id>:<file>' as passed by Checkmk",
     )
     parser.add_argument("--password", help="Plain password (for testing only)")
+    parser.add_argument(
+        "--identity-file",
+        help="SSH private key file; $OMD_ROOT, other environment variables and ~ are expanded",
+    )
     parser.add_argument("--ssh-options", default=DEFAULT_SSH_OPTS)
     parser.add_argument("--ospfv2", action="store_true")
     parser.add_argument("--ospfv3", action="store_true")
@@ -52,10 +56,20 @@ def resolve_password(args):
     return lookup(Path(pw_file), pw_id)
 
 
+def identity_file(args):
+    if not args.identity_file:
+        return None
+    return os.path.expanduser(os.path.expandvars(args.identity_file))
+
+
 def build_ssh_command(args, password, command):
     ssh = ["ssh", "-p", str(args.port)] + shlex.split(args.ssh_options)
     env = dict(os.environ)
-    if password is not None:
+    if key := identity_file(args):
+        # key authentication takes precedence over a configured password
+        ssh += ["-i", key, "-o", "IdentitiesOnly=yes", "-o", "BatchMode=yes"]
+        cmd = ssh
+    elif password is not None:
         ssh += [
             "-o", "PreferredAuthentications=password,keyboard-interactive",
             "-o", "PubkeyAuthentication=no",
@@ -88,8 +102,12 @@ def main(argv=None):
     args = parse_arguments(sys.argv[1:] if argv is None else argv)
     protocols = [p for p in ("ospfv2", "ospfv3") if getattr(args, p)] or ["ospfv2"]
 
+    if (key := identity_file(args)) and not os.path.isfile(key):
+        sys.stderr.write(f"SSH key file not found or not readable: {key}\n")
+        return 2
+
     try:
-        password = resolve_password(args)
+        password = None if args.identity_file else resolve_password(args)
     except Exception as exc:  # pylint: disable=broad-except
         sys.stderr.write(f"Cannot read password from the password store: {exc}\n")
         return 2

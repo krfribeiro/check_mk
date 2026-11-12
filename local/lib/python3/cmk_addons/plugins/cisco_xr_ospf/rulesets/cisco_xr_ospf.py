@@ -7,6 +7,7 @@ from cmk.rulesets.v1.form_specs import (
     DefaultValue,
     DictElement,
     Dictionary,
+    InputHint,
     Integer,
     LevelDirection,
     Password,
@@ -26,9 +27,10 @@ def _agent_form() -> Dictionary:
         title=Title("Cisco IOS-XR OSPF neighbors via SSH"),
         help_text=Help(
             "Connects to the router via SSH and runs 'show ospf vrf all neighbor' "
-            "(and optionally 'show ospfv3 vrf all neighbor'). Password authentication "
-            "needs 'sshpass' on the Checkmk server. Without a password, SSH key "
-            "authentication of the site user is used."
+            "(and optionally 'show ospfv3 vrf all neighbor'). Authenticate either with "
+            "an SSH private key file or with a password (needs 'sshpass' on the Checkmk "
+            "server). If a key file is set, it is used and the password is ignored. "
+            "With neither, the default keys of the site user (~/.ssh) are tried."
         ),
         elements={
             "username": DictElement(
@@ -41,6 +43,20 @@ def _agent_form() -> Dictionary:
             "password": DictElement(
                 required=False,
                 parameter_form=Password(title=Title("Password"), migrate=migrate_to_password),
+            ),
+            "identity_file": DictElement(
+                required=False,
+                parameter_form=String(
+                    title=Title("SSH private key file"),
+                    help_text=Help(
+                        "Path to the private key on the Checkmk server, readable by the site "
+                        "user, e.g. $OMD_ROOT/.ssh/ospf_router. $OMD_ROOT, other environment "
+                        "variables and ~ are expanded. The key must not have a passphrase. "
+                        "Takes precedence over the password."
+                    ),
+                    prefill=InputHint("$OMD_ROOT/.ssh/id_ed25519"),
+                    custom_validate=(validators.LengthInRange(min_value=1),),
+                ),
             ),
             "address": DictElement(
                 required=False,

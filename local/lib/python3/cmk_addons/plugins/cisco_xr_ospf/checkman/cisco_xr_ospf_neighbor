@@ -7,8 +7,10 @@ description:
  Monitors the OSPF neighbors of all VRFs and processes of a Cisco IOS-XR
  router. The data is collected by the special agent "Cisco IOS-XR OSPF
  neighbors (SSH, all VRFs)", which runs "show ospf vrf all neighbor" on the router via SSH.
- Password authentication needs "sshpass" on the Checkmk server; the password
- is read from the Checkmk password store and never passed on the command line.
+ Authentication is either by SSH private key file (e.g.
+ $OMD_ROOT/.ssh/ospf_router) or by password. Password authentication needs
+ "sshpass" on the Checkmk server; the password is read from the Checkmk
+ password store and never passed on the command line.
 
  The service state follows the OSPF neighbor state: FULL and 2WAY are OK,
  DOWN is CRIT and all transitional states (ATTEMPT, INIT, EXSTART, EXCHANGE,

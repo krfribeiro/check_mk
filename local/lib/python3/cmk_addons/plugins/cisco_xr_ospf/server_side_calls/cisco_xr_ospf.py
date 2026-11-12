@@ -31,7 +31,9 @@ def commands_cisco_xr_ospf(
         "--port", str(params.get("port", 22)),
         "--timeout", str(params.get("timeout", 30)),
     ]
-    if (password := params.get("password")) is not None:
+    if identity_file := params.get("identity_file"):
+        args += ["--identity-file", str(identity_file)]
+    elif (password := params.get("password")) is not None:
         # passed as "<id>:<password store file>", never as plain text
         args += ["--password-ref", password]
     if ssh_options := params.get("ssh_options"):
