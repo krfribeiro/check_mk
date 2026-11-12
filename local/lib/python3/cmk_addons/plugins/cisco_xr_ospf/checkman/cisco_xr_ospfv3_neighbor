@@ -1,0 +1,29 @@
+title: Cisco IOS-XR: OSPFv3 neighbors of all VRFs (SSH)
+agents: cisco_xr_ospf
+catalog: app/cisco
+license: GPLv2
+distribution: check_mk
+description:
+ Monitors the OSPFv3 neighbors of all VRFs and processes of a Cisco IOS-XR
+ router. The data is collected by the special agent "Cisco IOS-XR OSPF
+ neighbors (SSH, all VRFs)", which runs "show ospfv3 vrf all neighbor" on the router via SSH.
+ Password authentication needs "sshpass" on the Checkmk server; the password
+ is read from the Checkmk password store and never passed on the command line.
+
+ The service state follows the OSPF neighbor state: FULL and 2WAY are OK,
+ DOWN is CRIT and all transitional states (ATTEMPT, INIT, EXSTART, EXCHANGE,
+ LOADING) are WARN. All of these can be changed with the rule "Cisco IOS-XR
+ OSPF neighbors (per VRF)", which also allows lower levels on the neighbor
+ uptime (to detect flapping adjacencies) and the state for a neighbor that is
+ missing from the output (default CRIT).
+
+ The summary shows state (with DR/BDR role), address, OSPF process and
+ uptime. VRF, neighbor ID, interface, priority and dead time are in the
+ details.
+
+item:
+ The VRF, the neighbor router ID and the local interface, e.g.
+ {default 10.255.0.2 on GigabitEthernet0/0/0/0}.
+
+discovery:
+ One service is created for each neighbor found in the output.
