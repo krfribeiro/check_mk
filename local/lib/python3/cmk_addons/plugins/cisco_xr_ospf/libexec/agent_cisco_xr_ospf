@@ -20,6 +20,16 @@ COMMANDS = {
     "ospfv3": "show ospfv3 vrf all neighbor",
 }
 
+# exit codes of sshpass (see "man sshpass")
+SSHPASS_ERRORS = {
+    1: "sshpass: invalid command line argument",
+    2: "sshpass: conflicting arguments given",
+    3: "sshpass: general runtime error",
+    4: "sshpass: unrecognized response from ssh (password prompt not detected)",
+    5: "sshpass: invalid/incorrect password (login rejected by the router)",
+    6: "sshpass: host public key is unknown",
+}
+
 DEFAULT_SSH_OPTS = "-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o LogLevel=ERROR"
 
 
@@ -93,8 +103,10 @@ def run_command(args, password, command):
     except subprocess.TimeoutExpired:
         return None, f"timeout after {args.timeout}s"
     if result.returncode != 0:
-        err = " ".join((result.stderr or result.stdout or "").split()) or "no output"
-        return None, f"ssh rc={result.returncode}: {err}"
+        err = " ".join((result.stderr or result.stdout or "").split())
+        if cmd[0] == "sshpass" and result.returncode in SSHPASS_ERRORS:
+            err = "; ".join(filter(None, [SSHPASS_ERRORS[result.returncode], err]))
+        return None, f"ssh rc={result.returncode}: {err or 'no output'}"
     return result.stdout, None
 
 
