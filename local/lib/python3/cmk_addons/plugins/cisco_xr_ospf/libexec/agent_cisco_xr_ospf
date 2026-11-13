@@ -1,0 +1,149 @@
+#!/usr/bin/env python3
+# License: GNU General Public License v2
+"""Checkmk special agent: OSPF neighbors of all VRFs on Cisco IOS-XR via SSH.
+
+Runs "show ospf vrf all neighbor" (and optionally "show ospfv3 vrf all
+neighbor") on the router and hands the raw CLI output to the check plug-ins in
+the section <<<cisco_xr_ospf_neighbors:sep(0)>>>. All parsing is done on the
+Checkmk side, so the agent never needs to change when the output format does.
+"""
+
+import argparse
+import os
+import shlex
+import subprocess
+import sys
+from pathlib import Path
+
+COMMANDS = {
+    "ospfv2": "show ospf vrf all neighbor",
+    "ospfv3": "show ospfv3 vrf all neighbor",
+}
+
+# exit codes of sshpass (see "man sshpass")
+SSHPASS_ERRORS = {
+    1: "sshpass: invalid command line argument",
+    2: "sshpass: conflicting arguments given",
+    3: "sshpass: general runtime error",
+    4: "sshpass: unrecognized response from ssh (password prompt not detected)",
+    5: "sshpass: invalid/incorrect password (login rejected by the router)",
+    6: "sshpass: host public key is unknown",
+}
+
+DEFAULT_SSH_OPTS = "-o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 -o LogLevel=ERROR"
+
+
+def parse_arguments(argv):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--host", required=True, help="Router address or DNS name")
+    parser.add_argument("--user", required=True, help="SSH user")
+    parser.add_argument("--port", type=int, default=22)
+    parser.add_argument("--timeout", type=int, default=30, help="Timeout per command (s)")
+    parser.add_argument(
+        "--password-ref",
+        help="Password store reference '<id>:<file>' as passed by Checkmk",
+    )
+    parser.add_argument("--password", help="Plain password (for testing only)")
+    parser.add_argument(
+        "--identity-file",
+        help="SSH private key file; $OMD_ROOT, other environment variables and ~ are expanded",
+    )
+    parser.add_argument("--ssh-options", default=DEFAULT_SSH_OPTS)
+    parser.add_argument("--ospfv2", action="store_true")
+    parser.add_argument("--ospfv3", action="store_true")
+    parser.add_argument("--debug", action="store_true")
+    return parser.parse_args(argv)
+
+
+def resolve_password(args):
+    if args.password:
+        return args.password
+    if not args.password_ref:
+        return None
+    pw_id, pw_file = args.password_ref.rsplit(":", 1)
+    from cmk.utils.password_store import lookup  # pylint: disable=import-outside-toplevel
+
+    return lookup(Path(pw_file), pw_id)
+
+
+def identity_file(args):
+    if not args.identity_file:
+        return None
+    return os.path.expanduser(os.path.expandvars(args.identity_file))
+
+
+def build_ssh_command(args, password, command):
+    ssh = ["ssh", "-p", str(args.port)] + shlex.split(args.ssh_options)
+    env = dict(os.environ)
+    if key := identity_file(args):
+        # key authentication takes precedence over a configured password
+        ssh += ["-i", key, "-o", "IdentitiesOnly=yes", "-o", "BatchMode=yes"]
+        cmd = ssh
+    elif password is not None:
+        ssh += [
+            "-o", "PreferredAuthentications=password,keyboard-interactive",
+            "-o", "PubkeyAuthentication=no",
+            "-o", "NumberOfPasswordPrompts=1",
+        ]
+        env["SSHPASS"] = password  # sshpass -e: password never shows up in argv
+        cmd = ["sshpass", "-e"] + ssh
+    else:
+        cmd = ssh + ["-o", "BatchMode=yes"]
+    return cmd + [f"{args.user}@{args.host}", command], env
+
+
+def run_command(args, password, command):
+    cmd, env = build_ssh_command(args, password, command)
+    try:
+        result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=args.timeout, env=env, check=False
+        )
+    except FileNotFoundError as exc:
+        return None, f"{exc.filename} not found on the Checkmk server"
+    except subprocess.TimeoutExpired:
+        return None, f"timeout after {args.timeout}s"
+    if result.returncode != 0:
+        err = " ".join((result.stderr or result.stdout or "").split())
+        if cmd[0] == "sshpass" and result.returncode in SSHPASS_ERRORS:
+            err = "; ".join(filter(None, [SSHPASS_ERRORS[result.returncode], err]))
+        return None, f"ssh rc={result.returncode}: {err or 'no output'}"
+    return result.stdout, None
+
+
+def main(argv=None):
+    args = parse_arguments(sys.argv[1:] if argv is None else argv)
+    protocols = [p for p in ("ospfv2", "ospfv3") if getattr(args, p)] or ["ospfv2"]
+
+    if (key := identity_file(args)) and not os.path.isfile(key):
+        sys.stderr.write(f"SSH key file not found or not readable: {key}\n")
+        return 2
+
+    try:
+        password = None if args.identity_file else resolve_password(args)
+    except Exception as exc:  # pylint: disable=broad-except
+        sys.stderr.write(f"Cannot read password from the password store: {exc}\n")
+        return 2
+
+    blocks = []
+    errors = []
+    for proto in protocols:
+        output, error = run_command(args, password, COMMANDS[proto])
+        if error is not None:
+            errors.append(f"{proto}: {error}")
+            blocks.append(f"[[[{proto}:error]]]\n{error}")
+        else:
+            blocks.append(f"[[[{proto}]]]\n{output.rstrip()}")
+
+    if len(errors) == len(protocols):
+        # nothing usable: let the Check_MK service of the host go CRIT
+        sys.stderr.write("; ".join(errors) + "\n")
+        return 2
+
+    sys.stdout.write("<<<cisco_xr_ospf_neighbors:sep(0)>>>\n")
+    for block in blocks:
+        sys.stdout.write(block + "\n")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
